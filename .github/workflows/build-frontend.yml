@@ -1,0 +1,98 @@
+name: Build aDOs IDE Frontend
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'applications/electron/**'
+      - 'theia-extensions/**'
+      - 'ados-extensions/**'
+      - 'src/**'
+      - 'webpack.config.js'
+      - 'package.json'
+      - 'yarn.lock'
+
+jobs:
+  build-frontend:
+    name: Build Frontend Bundle
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22.15.0'
+        cache: 'yarn'
+        cache-dependency-path: 'yarn.lock'
+
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libxkbfile-dev libsecret-1-dev python3
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+
+    - name: Install Node.js Dependencies
+      run: yarn install --frozen-lockfile
+
+    - name: Patch Dependencies (required for Theia)
+      run: |
+        if command -v node-gyp 2>/dev/null; then
+          echo "node-gyp is available"
+        else
+          npm install -g node-gyp
+        fi
+
+    - name: Build Extensions
+      run: yarn build:extensions
+      env:
+        NODE_OPTIONS: --max-old-space-size=8192
+
+    - name: Build Frontend Bundle
+      run: yarn build:applications:dev
+      env:
+        NODE_OPTIONS: --max-old-space-size=16384
+      continue-on-error: false
+
+    - name: Verify Bundle Creation
+      run: |
+        echo "Checking bundle creation..."
+        find lib -name "bundle.js" -type f -exec ls -lh {} \;
+        if [ -f "lib/frontend/bundle.js" ]; then
+          echo "✅ Bundle.js created successfully!"
+          ls -lh lib/frontend/bundle.js
+        else
+          echo "❌ bundle.js not found"
+          find lib -name "*.js" -type f | head -10
+          exit 1
+        fi
+
+    - name: Package Frontend Assets
+      run: |
+        mkdir -p frontend-assets
+        cp -r lib/frontend/* frontend-assets/ 2>/dev/null || true
+        cp -r src-gen/frontend frontend-assets/ 2>/dev/null || true
+        tar -czf frontend-assets.tar.gz frontend-assets/
+
+    - name: Upload Frontend Bundle Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ados-frontend-assets
+        path: frontend-assets.tar.gz
+        retention-days: 7
+
+    - name: Upload Build Logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          build-electron.log
+          electron-rebuild.log
+        if-no-files-found: warn

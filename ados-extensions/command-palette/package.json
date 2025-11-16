@@ -1,0 +1,40 @@
+{
+  "private": true,
+  "name": "ados-command-palette-ext",
+  "version": "1.0.0",
+  "description": "aDOs Custom Command Palette Extension",
+  "keywords": ["theia-extension"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/example/ados-ide.git"
+  },
+  "bugs": {
+    "url": "https://github.com/example/ados-ide/issues"
+  },
+  "homepage": "https://github.com/example/ados-ide#readme",
+  "files": ["lib", "src"],
+  "activationEvents": ["onStartup"],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rimraf lib *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@theia/core": "1.66.2",
+    "@theia/monaco": "1.66.2",
+    "fuse.js": "^6.6.2",
+    "inversify": "^6.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^4.5.5"
+  },
+  "theiaExtensions": [
+    {
+      "frontend": "lib/browser/command-palette-frontend-module",
+      "electronMain": "lib/electron-main/command-palette-electron-main-module"
+    }
+  ],
+  "peerDependencies": {
+    "react": "^16.8.0"
+  }
+}
